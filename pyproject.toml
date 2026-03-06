@@ -1,0 +1,10 @@
+[project]
+name = "database-backup-tool"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "textual[syntax]>=8.0.2",
+    "textual-dev>=1.8.0",
+]
