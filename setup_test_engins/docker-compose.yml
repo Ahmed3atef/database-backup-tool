@@ -1,0 +1,135 @@
+services:
+
+  # ─── PostgreSQL ────────────────────────────────────────────────
+  postgres:
+    image: postgres:latest
+    container_name: backup_postgres
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
+      POSTGRES_DB: shop_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./init-scripts/postgres:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d shop_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── MySQL ─────────────────────────────────────────────────────
+  mysql:
+    image: mysql:latest
+    container_name: backup_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: inventory_db
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: admin123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init-scripts/mysql:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "admin", "-padmin123"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── MariaDB ───────────────────────────────────────────────────
+  mariadb:
+    image: mariadb:latest
+    container_name: backup_mariadb
+    environment:
+      MARIADB_ROOT_PASSWORD: root123
+      MARIADB_DATABASE: hr_db
+      MARIADB_USER: admin
+      MARIADB_PASSWORD: admin123
+    ports:
+      - "3307:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./init-scripts/mariadb:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── MongoDB ───────────────────────────────────────────────────
+  mongodb:
+    image: mongo:latest
+    container_name: backup_mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
+      MONGO_INITDB_DATABASE: analytics_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./init-scripts/mongodb:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── MSSQL ─────────────────────────────────────────────────────
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: backup_mssql
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Admin@123456"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql_data:/var/opt/mssql
+      - ./init-scripts/mssql:/init-scripts
+    # MSSQL needs a special entrypoint to run init scripts after startup
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        /opt/mssql/bin/sqlservr &
+        sleep 30
+        /opt/mssql-tools18/bin/sqlcmd -S localhost -U SA -P "Admin@123456" -No -i /init-scripts/init.sql
+        wait
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U SA -P 'Admin@123456' -No -Q 'SELECT 1' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  # ─── SQLite (lightweight container just to hold the file) ──────
+  sqlite:
+    image: ubuntu:24.04
+    container_name: backup_sqlite
+    volumes:
+      - sqlite_data:/data
+      - ./init-scripts/sqlite:/init-scripts
+    command: >
+      bash -c "
+        apt-get update -qq && apt-get install -y -qq sqlite3 &&
+        sqlite3 /data/library.db < /init-scripts/init.sql &&
+        echo '✅ SQLite dummy data loaded at /data/library.db' &&
+        tail -f /dev/null
+      "
+    healthcheck:
+      test: ["CMD-SHELL", "sqlite3 /data/library.db 'SELECT COUNT(*) FROM books;'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  mysql_data:
+  mariadb_data:
+  mongodb_data:
+  mssql_data:
+  sqlite_data:
