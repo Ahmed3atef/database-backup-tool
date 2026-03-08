@@ -11,3 +11,4 @@ wheels/
 *.sql
 *.dump
 *.log
+history
