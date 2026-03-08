@@ -10,3 +10,4 @@ wheels/
 .venv
 *.sql
 *.dump
+*.log
