@@ -1,8 +1,10 @@
 import logging
 import os
+import asyncio
 from backup import full_backup
 from datetime import datetime
 from backup.executors import DockerExecutor, LocalExecutor, SSHExecutor, SSHDockerExecutor
+
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
@@ -44,8 +46,8 @@ def get_db_type() -> str:
     choice = int(input("Enter your choice: "))
     
     if choice not in type_of_db:
-        logger.error("Invalid Choice, pelease try again.")
-        raise ValueError("Invalid Choice, pelease try again.")
+        print("Invalid Choice, please try again.")
+        raise ValueError("Invalid Choice, please try again.")
     
     db_type = type_of_db[choice]
     return db_type
@@ -63,7 +65,7 @@ def get_executor_type() -> str:
     choice = int(input("Enter your choice: "))
     
     if choice not in type_of_executor:
-        logger.error("Invalid Executor Type")
+        print("Invalid Executor Type")
         raise TypeError("Invalid Executor Type")
     
     executor_type = type_of_executor[choice]
@@ -86,7 +88,7 @@ def get_executor_type() -> str:
     return executor_type
 
     
-def main():
+async def main():
     logger = setup_logger()
     db_name = input("Enter the name of the database you want to backup: ")
     user = input("Enter the username: ")
@@ -95,7 +97,7 @@ def main():
     executor_type = get_executor_type()
     backups_dir = setup_backups_dir(db_name)
     
-    full_backup(
+    await full_backup(
         db_type=db_type,
         db_name=db_name,
         db_user= user,
@@ -107,7 +109,7 @@ def main():
 
 if __name__ == "__main__":
     
-    main()
+    asyncio.run(main())
     
     # 2. SQLite Database Example (Runs locally naturally)
     # import sqlite3

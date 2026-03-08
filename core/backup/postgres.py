@@ -3,7 +3,7 @@ import logging
 from .base import BaseDatabaseBackup
 
 class PostgreSQLBackup(BaseDatabaseBackup):
-    def backup(self, output_file: str, logger: logging.Logger) -> str:
+    async def backup(self, output_file: str, logger: logging.Logger) -> str:
         try:
             # Ask pg_dump to output in Plain Text SQL directly to stdout so we can catch it from ANY executor
             # Note: We omit the '-f' flag to catch the raw stream instead.
@@ -15,11 +15,8 @@ class PostgreSQLBackup(BaseDatabaseBackup):
                 env_vars['PGPASSWORD'] = self.db_pass
 
             # Let the executor securely handle reaching the database internally
-            backup_data = self.executor.execute(command, env=env_vars)
-            
-            # Save the raw DB stream dump into the desired local output file
-            with open(output_file, 'w', encoding='utf-8') as f:
-                f.write(backup_data)
+            # The executor will stream the stdout directly to output_file
+            await self.executor.execute(command, output_file=output_file, env=env_vars)
                 
             logger.info(f"PostgreSQL backup of {self.db_name} completed successfully, saved to {output_file}.")
             return output_file
