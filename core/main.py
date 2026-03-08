@@ -2,7 +2,7 @@ import logging
 import os
 from backup import full_backup
 from datetime import datetime
-from backup.executors import DockerExecutor, LocalExecutor, SSHExecutor
+from backup.executors import DockerExecutor, LocalExecutor, SSHExecutor, SSHDockerExecutor
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
@@ -24,10 +24,10 @@ def setup_logger() -> logging.Logger:
     test_logger = logging.getLogger("BackupTool")
     return test_logger
 
-def setup_backups_dir() -> str:
+def setup_backups_dir(db_name: str) -> str:
     backups_dir = os.path.join(project_root, "backups")
     os.makedirs(backups_dir, exist_ok=True)
-    filename = f"shop_db_backup_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.sql"
+    filename = f"{db_name}_backup_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.sql"
     output_file = os.path.join(backups_dir, filename)
     return output_file
 
@@ -69,44 +69,37 @@ def get_executor_type() -> str:
     executor_type = type_of_executor[choice]
     if executor_type == "docker":
         container_name = input("Enter the name of the docker container: ")
-        return DockerExecutor(container_name="backup_postgres")
+        return DockerExecutor(container_name=container_name)
     elif executor_type == "local":
         return LocalExecutor()
     elif executor_type == "ssh":
         host = input("Enter the host: ")
-        port = input("Enter the port: ")
         username = input("Enter the username: ")
         password = input("Enter the password: ")
-        return SshExecutor(host=host, port=port, username=username, password=password)
+        return SSHExecutor(host=host, user=username, password=password)
     elif executor_type == "ssh_docker":
         host = input("Enter the host: ")
-        port = input("Enter the port: ")
         username = input("Enter the username: ")
         password = input("Enter the password: ")
         container_name = input("Enter the name of the docker container: ")
-        return SshDockerExecutor(host=host, port=port, username=username, password=password, container_name=container_name)
+        return SSHDockerExecutor(host=host, user=username, password=password, container_name=container_name)
     return executor_type
 
-def get_db_config(username: str, password: str) -> dict:
-    return {
-        "user": username,
-        "password": password
-    }
     
 def main():
     logger = setup_logger()
-    backups_dir = setup_backups_dir()
     db_name = input("Enter the name of the database you want to backup: ")
     user = input("Enter the username: ")
     password = input("Enter the password: ")
     db_type = get_db_type()
     executor_type = get_executor_type()
-    db_config = get_db_config(user, password)
+    backups_dir = setup_backups_dir(db_name)
     
     full_backup(
         db_type=db_type,
-        db_name="shop_db",
-        config=db_config,
+        db_name=db_name,
+        db_user= user,
+        db_pass = password,
         output_file=backups_dir,
         logger=logger,
         executor=executor_type

@@ -83,3 +83,41 @@ class SSHExecutor(BaseExecutor):
             return output_data
         finally:
             ssh.close()
+
+
+class SSHDockerExecutor(BaseExecutor):
+    """Executes commands remotely inside a Docker container via SSH connection."""
+    def __init__(self, host: str, user: str, password: str, container_name: str):
+        self.host = host
+        self.user = user
+        self.password = password
+        self.container_name = container_name
+        
+    def execute(self, cmd: List[str], env: Optional[dict] = None) -> str:
+        docker_cmd = ["docker", "exec", "-i"]
+        if env:
+            for key, val in env.items():
+                docker_cmd.extend(["-e", f"{key}={val}"])
+        docker_cmd.append(self.container_name)
+        
+        # We need to execute the command inside the container.
+        # Note: if cmd arguments have spaces, it's safer to properly quote them, 
+        # but for consistency with SSHExecutor we just join.
+        docker_cmd.extend(cmd)
+        command_str = " ".join(docker_cmd)
+        
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        try:
+            ssh.connect(self.host, username=self.user, password=self.password)
+            stdin, stdout, stderr = ssh.exec_command(command_str)
+            
+            error_data = stderr.read().decode('utf-8')
+            output_data = stdout.read().decode('utf-8')
+            
+            if error_data and not output_data: 
+                raise Exception(f"SSH Docker Execution Error: {error_data}")
+                
+            return output_data
+        finally:
+            ssh.close()

@@ -7,7 +7,7 @@ from .mongo import MongoDBBackup
 from .sqlite import SQLiteBackup
 from .executors import LocalExecutor, DockerExecutor, SSHExecutor, BaseExecutor
 
-def full_backup(db_type: str, db_name: str, config: dict, output_file: str, logger: logging.Logger, executor: BaseExecutor = None) -> str:
+def full_backup(db_type: str, db_name: str, db_user: str, db_pass: str, output_file: str, logger: logging.Logger, executor: BaseExecutor = None) -> str:
     """
     Main entry point function for performing backups. 
     It is safely isolated in this dedicated module structure.
@@ -18,7 +18,7 @@ def full_backup(db_type: str, db_name: str, config: dict, output_file: str, logg
         
     try:
         # The factory provides the correct database class strategy combined with its execution environment
-        strategy = BackupFactory.get_strategy(db_type, db_name, config, executor)
+        strategy = BackupFactory.get_strategy(db_type, db_name, db_user, db_pass, executor)
         
         # Execute the unified backup method
         return strategy.backup(output_file, logger)

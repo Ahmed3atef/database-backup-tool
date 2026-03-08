@@ -6,7 +6,7 @@ class MySQLBackup(BaseDatabaseBackup):
         try:
             # mysqldump outputs raw text directly. 
             # We fetch the exact command and delegate its execution to the attached executor.
-            command = ["mysqldump", "-u", self.config['user'], f"-p{self.config['password']}", self.db_name]
+            command = ["mysqldump", "-u", self.db_user, f"-p{self.db_pass}", self.db_name]
             
             # The executor (Local, Docker, SSH) runs the command and returns the raw SQL dump as a string.
             backup_data = self.executor.execute(command)

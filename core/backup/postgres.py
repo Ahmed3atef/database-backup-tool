@@ -7,12 +7,12 @@ class PostgreSQLBackup(BaseDatabaseBackup):
         try:
             # Ask pg_dump to output in Plain Text SQL directly to stdout so we can catch it from ANY executor
             # Note: We omit the '-f' flag to catch the raw stream instead.
-            command = ["pg_dump", "-U", self.config['user'], "-F", "p", "-b", "-v", self.db_name]
+            command = ["pg_dump", "-U", self.db_user, "-F", "p", "-b", "-v", self.db_name]
             
             # Pass the Password via Environment Dictionary
             env_vars = {}
-            if 'password' in self.config:
-                env_vars['PGPASSWORD'] = self.config['password']
+            if self.db_pass:
+                env_vars['PGPASSWORD'] = self.db_pass
 
             # Let the executor securely handle reaching the database internally
             backup_data = self.executor.execute(command, env=env_vars)
