@@ -1,6 +1,6 @@
 from textual.app import App, ComposeResult
 from textual.widgets import Header, Footer, Button, Static, Label, Input, Select
-from textual.containers import Container, VerticalScroll, Horizontal
+from textual.containers import Container, VerticalScroll, HorizontalGroup
 from textual.screen import Screen
 from core.utils import setup_logger, setup_backups_dir
 from core.backup import full_backup
@@ -31,7 +31,7 @@ class BackupForm(Screen):
                 ),
                 # Dynamic fields container
                 VerticalScroll(id="dynamic_fields"),
-                Horizontal(
+                HorizontalGroup(
                     Button("Run Backup", variant="success", id="btn_run"),
                     Button("Back", variant="default", id="btn_back"),
                 ),
@@ -41,16 +41,16 @@ class BackupForm(Screen):
         )
         yield Footer()
 
-    def on_select_changed(self, event: Select.Changed) -> None:
+    async def on_select_changed(self, event: Select.Changed) -> None:
         if event.select.id == "executor_type":
-            self.update_dynamic_fields(event.value)
+            await self.update_dynamic_fields(event.value)
 
-    def update_dynamic_fields(self, executor_type: str) -> None:
+    async def update_dynamic_fields(self, executor_type: str) -> None:
         if not executor_type or executor_type == Select.BLANK:
             return
             
         container = self.query_one("#dynamic_fields", VerticalScroll)
-        container.remove_children()
+        await container.query("*").remove()
         
         if executor_type in ["docker", "ssh_docker"]:
             container.mount(Label("Container Name"))
