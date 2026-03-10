@@ -1,0 +1,41 @@
+
+#main_container {
+    align: center middle;
+    width: 100%;
+    height: 100%;
+}
+#title {
+    text-align: center;
+    width: 100%;
+    color: $accent;
+    text-style: bold;
+    margin-bottom: 2;
+}
+#menu_buttons {
+    width: 30;
+    align: center middle;
+}
+#form_container {
+    width: 60;
+    padding: 1 2;
+    border: solid $accent;
+    background: $surface;
+}
+Label {
+    margin-top: 1;
+    text-style: bold;
+}
+Input {
+    margin-bottom: 1;
+}
+Select {
+    margin-bottom: 1;
+}
+Button {
+    margin-top: 2;
+    width: 100%;
+}
+Horizontal Button {
+    width: 50%;
+    margin: 1;
+}
