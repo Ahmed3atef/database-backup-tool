@@ -12,3 +12,6 @@ wheels/
 *.dump
 *.log
 history
+*.tar.gz
+/backups
+/logs
