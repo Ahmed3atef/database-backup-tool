@@ -9,6 +9,11 @@ class BaseDatabaseBackup(ABC):
         self.db_pass = db_pass
 
     @abstractmethod
-    def backup(self, output_file: str, logger: logging.Logger) -> str:
+    async def backup(self, output_file: str, logger: logging.Logger) -> str:
+        """Every database class must implement this method."""
+        pass
+
+    @abstractmethod
+    async def restore(self, input_file: str, logger: logging.Logger) -> None:
         """Every database class must implement this method."""
         pass
