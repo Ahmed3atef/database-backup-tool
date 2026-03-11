@@ -4,6 +4,7 @@ from textual.containers import Container, Vertical, Horizontal, VerticalScroll, 
 from textual.screen import Screen
 from .backup_screen import BackupForm
 from .compression_screen import CompressionScreen
+from .restore_screen import RestoreScreen
 
 class MainMenu(Screen):
     def compose(self) -> ComposeResult:
@@ -13,6 +14,7 @@ class MainMenu(Screen):
             VerticalScroll(
                 Button("New Backup", variant="success", id="btn_backup"),
                 Button("Compress Backups", variant="primary", id="btn_compress"),
+                Button("Restore Backup", variant="warning", id="btn_restore"),
                 Button("Exit", variant="error", id="btn_exit"),
                 id="menu_buttons"
             ),
@@ -25,5 +27,7 @@ class MainMenu(Screen):
             self.app.push_screen(BackupForm())
         elif event.button.id == "btn_compress":
             self.app.push_screen(CompressionScreen())
+        elif event.button.id == "btn_restore":
+            self.app.push_screen(RestoreScreen())
         elif event.button.id == "btn_exit":
             self.app.exit()

@@ -16,3 +16,12 @@ class MySQLBackup(BaseDatabaseBackup):
         except Exception as e:
             logger.error(f"Error occurred during MySQL backup of {self.db_name}: {e}")
             raise
+
+    async def restore(self, input_file: str, logger: logging.Logger) -> None:
+        try:
+            command = ["mysql", "-u", self.db_user, f"-p{self.db_pass}", self.db_name]
+            await self.executor.restore(command, input_file=input_file)
+            logger.info(f"MySQL restore of {self.db_name} from {input_file} completed successfully.")
+        except Exception as e:
+            logger.error(f"Error occurred during MySQL restore of {self.db_name}: {e}")
+            raise

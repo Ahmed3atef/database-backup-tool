@@ -27,3 +27,32 @@ def compress_backup(backup_file: str, output_file: str, logger: logging.Logger) 
     except Exception as e:
         logger.error(f"Unexpected error during compression: {e}")
         raise
+
+def decompress_backup(compressed_file: str, logger: logging.Logger) -> str:
+    """
+    Decompress a tar.gz backup archive.
+
+    :param compressed_file: The path to the compressed file
+    :param logger: Logger instance
+    :return: Path to the decompressed file
+    """
+    try:
+        if not os.path.isfile(compressed_file):
+            logger.error(f"Compressed file '{compressed_file}' does not exist.")
+            raise FileNotFoundError(f"Compressed file '{compressed_file}' does not exist.")
+        
+        extract_path = os.path.dirname(compressed_file)
+        with tarfile.open(compressed_file, "r:gz") as tar:
+            # We assume one file per archive for now as per our compress_backup implementation
+            member = tar.next()
+            if member:
+                tar.extract(member, path=extract_path)
+                decompressed_file = os.path.join(extract_path, member.name)
+                logger.info(f"Backup decompressed successfully to '{decompressed_file}'.")
+                return decompressed_file
+            else:
+                raise Exception("Archive is empty.")
+
+    except Exception as e:
+        logger.error(f"Error while decompressing backup file: {e}")
+        raise

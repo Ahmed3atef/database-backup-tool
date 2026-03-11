@@ -16,3 +16,13 @@ class MongoDBBackup(BaseDatabaseBackup):
         except Exception as e:
             logger.error(f"Error occurred during MongoDB backup of {self.db_name}: {e}")
             raise
+
+    async def restore(self, input_file: str, logger: logging.Logger) -> None:
+        try:
+            # Using --archive flag to read from stdin
+            command = ["mongorestore", "--db", self.db_name, "--archive"]
+            await self.executor.restore(command, input_file=input_file)
+            logger.info(f"MongoDB restore of {self.db_name} from {input_file} completed successfully.")
+        except Exception as e:
+            logger.error(f"Error occurred during MongoDB restore of {self.db_name}: {e}")
+            raise

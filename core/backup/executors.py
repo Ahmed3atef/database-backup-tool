@@ -14,6 +14,11 @@ class BaseExecutor(ABC):
         """Executes the command asynchronously and writes output directly to output_file."""
         pass
 
+    @abstractmethod
+    async def restore(self, cmd: List[str], input_file: str, env: Optional[dict] = None) -> None:
+        """Executes the command asynchronously and reads input directly from input_file."""
+        pass
+
 
 class LocalExecutor(BaseExecutor):
     """Executes commands on the local machine (host)."""
@@ -50,6 +55,35 @@ class LocalExecutor(BaseExecutor):
             if process.returncode != 0:
                 raise Exception(f"Local Execution Error: {stderr.decode('utf-8', errors='replace')}")
 
+    async def restore(self, cmd: List[str], input_file: str, env: Optional[dict] = None) -> None:
+        import os
+        is_windows = (os.name == 'nt')
+        full_env = os.environ.copy()
+        if env:
+            full_env.update(env)
+            
+        with open(input_file, 'rb') as f:
+            if is_windows:
+                cmd_str = " ".join(cmd)
+                process = await asyncio.create_subprocess_shell(
+                    cmd_str,
+                    stdin=f,
+                    stderr=asyncio.subprocess.PIPE,
+                    env=full_env
+                )
+            else:
+                process = await asyncio.create_subprocess_exec(
+                    *cmd,
+                    stdin=f,
+                    stderr=asyncio.subprocess.PIPE,
+                    env=full_env
+                )
+                
+            _, stderr = await process.communicate()
+            
+            if process.returncode != 0:
+                raise Exception(f"Local Restore Error: {stderr.decode('utf-8', errors='replace')}")
+
 
 class DockerExecutor(BaseExecutor):
     """Executes commands inside a running Docker container."""
@@ -80,6 +114,27 @@ class DockerExecutor(BaseExecutor):
             
             if process.returncode != 0:
                 raise Exception(f"Docker Execution Error: {stderr.decode('utf-8', errors='replace')}")
+
+    async def restore(self, cmd: List[str], input_file: str, env: Optional[dict] = None) -> None:
+        docker_cmd = ["docker", "exec", "-i"]
+        if env:
+            for key, val in env.items():
+                docker_cmd.extend(["-e", f"{key}={val}"])
+                
+        docker_cmd.append(self.container_name)
+        docker_cmd.extend(cmd)
+        
+        with open(input_file, 'rb') as f:
+            process = await asyncio.create_subprocess_exec(
+                *docker_cmd,
+                stdin=f,
+                stderr=asyncio.subprocess.PIPE
+            )
+            
+            _, stderr = await process.communicate()
+            
+            if process.returncode != 0:
+                raise Exception(f"Docker Restore Error: {stderr.decode('utf-8', errors='replace')}")
 
 
 class SSHExecutor(BaseExecutor):
@@ -112,6 +167,30 @@ class SSHExecutor(BaseExecutor):
                 raise Exception(f"SSH Execution Error: {error_data}")
         finally:
             ssh.close()
+
+    def _run_ssh_restore_sync(self, command_str: str, input_file: str) -> None:
+        """Synchronous wrapper to stream SSH input."""
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        try:
+            ssh.connect(self.host, username=self.user, password=self.password)
+            stdin, stdout, stderr = ssh.exec_command(command_str)
+            
+            with open(input_file, 'rb') as f:
+                while True:
+                    data = f.read(1024 * 1024)
+                    if not data:
+                        break
+                    stdin.write(data)
+            stdin.channel.shutdown_write()
+            
+            error_data = stderr.read().decode('utf-8', errors='replace')
+            exit_status = stdout.channel.recv_exit_status()
+            
+            if exit_status != 0: 
+                raise Exception(f"SSH Restore Error: {error_data}")
+        finally:
+            ssh.close()
             
     async def execute(self, cmd: List[str], output_file: str, env: Optional[dict] = None) -> None:
         env_prefix = ""
@@ -122,6 +201,14 @@ class SSHExecutor(BaseExecutor):
         
         # Run the synchronous SSH loop inside a thread to not block asyncio
         await asyncio.to_thread(self._run_ssh_sync, command_str, output_file)
+
+    async def restore(self, cmd: List[str], input_file: str, env: Optional[dict] = None) -> None:
+        env_prefix = ""
+        if env:
+            env_prefix = " ".join([f"{k}={v}" for k, v in env.items()]) + " "
+            
+        command_str = env_prefix + " ".join(cmd)
+        await asyncio.to_thread(self._run_ssh_restore_sync, command_str, input_file)
 
 
 class SSHDockerExecutor(BaseExecutor):
@@ -154,6 +241,30 @@ class SSHDockerExecutor(BaseExecutor):
                 raise Exception(f"SSH Docker Execution Error: {error_data}")
         finally:
             ssh.close()
+
+    def _run_ssh_restore_sync(self, command_str: str, input_file: str) -> None:
+        """Synchronous wrapper to stream SSH input."""
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        try:
+            ssh.connect(self.host, username=self.user, password=self.password)
+            stdin, stdout, stderr = ssh.exec_command(command_str)
+            
+            with open(input_file, 'rb') as f:
+                while True:
+                    data = f.read(1024 * 1024)
+                    if not data:
+                        break
+                    stdin.write(data)
+            stdin.channel.shutdown_write()
+            
+            error_data = stderr.read().decode('utf-8', errors='replace')
+            exit_status = stdout.channel.recv_exit_status()
+            
+            if exit_status != 0: 
+                raise Exception(f"SSH Docker Restore Error: {error_data}")
+        finally:
+            ssh.close()
         
     async def execute(self, cmd: List[str], output_file: str, env: Optional[dict] = None) -> None:
         docker_cmd = ["docker", "exec", "-i"]
@@ -171,3 +282,15 @@ class SSHDockerExecutor(BaseExecutor):
         command_str = " ".join(docker_cmd)
         
         await asyncio.to_thread(self._run_ssh_sync, command_str, output_file)
+
+    async def restore(self, cmd: List[str], input_file: str, env: Optional[dict] = None) -> None:
+        docker_cmd = ["docker", "exec", "-i"]
+        if env:
+            for key, val in env.items():
+                docker_cmd.extend(["-e", f"{key}={val}"])
+                
+        docker_cmd.append(self.container_name)
+        docker_cmd.extend(cmd)
+        
+        command_str = " ".join(docker_cmd)
+        await asyncio.to_thread(self._run_ssh_restore_sync, command_str, input_file)

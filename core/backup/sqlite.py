@@ -26,3 +26,21 @@ class SQLiteBackup(BaseDatabaseBackup):
         except Exception as e:
             logger.error(f"Error occurred during SQLite backup of {self.db_name}: {e}")
             raise
+
+    def _restore_sync(self, input_file: str) -> None:
+        """Run the restore synchronously."""
+        conn = sqlite3.connect(self.db_name)
+        try:
+            with open(input_file, 'r') as f:
+                sql = f.read()
+                conn.executescript(sql)
+        finally:
+            conn.close()
+
+    async def restore(self, input_file: str, logger: logging.Logger) -> None:
+        try:
+            await asyncio.to_thread(self._restore_sync, input_file)
+            logger.info(f"SQLite restore of {self.db_name} from {input_file} completed successfully.")
+        except Exception as e:
+            logger.error(f"Error occurred during SQLite restore of {self.db_name}: {e}")
+            raise
