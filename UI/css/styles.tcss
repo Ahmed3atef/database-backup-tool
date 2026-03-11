@@ -13,6 +13,7 @@
 }
 #menu_buttons {
     width: 30;
+    height: auto;
     align: center middle;
 }
 #form_container {

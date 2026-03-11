@@ -1,13 +1,8 @@
 from textual.app import App, ComposeResult
 from textual.widgets import Header, Footer, Button, Static, Label, Input, Select
-from textual.containers import Container, VerticalScroll, Horizontal
+from textual.containers import Container, Vertical, Horizontal, VerticalScroll, HorizontalGroup
 from textual.screen import Screen
-from core.utils import setup_logger, setup_backups_dir
-from core.backup import full_backup
-from core.backup.executors import DockerExecutor, LocalExecutor, SSHExecutor, SSHDockerExecutor
 from UI.screens import BackupForm
-import asyncio
-import os
 
 class MainMenu(Screen):
     def compose(self) -> ComposeResult:
