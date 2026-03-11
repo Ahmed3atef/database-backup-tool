@@ -8,16 +8,16 @@ from .executors import BaseExecutor
 class BackupFactory:
     """Helper class designed to inspect the database type and return the appropriate strategy."""
     @staticmethod
-    def get_strategy(db_type: str, db_name: str, config: dict, executor: BaseExecutor = None) -> BaseDatabaseBackup:
+    def get_strategy(db_type: str, db_name: str, db_user:str, db_pass: str, executor: BaseExecutor = None) -> BaseDatabaseBackup:
         db_type = db_type.lower()
         if db_type == "mysql":
-            strategy = MySQLBackup(db_name, config)
+            strategy = MySQLBackup(db_name, db_user, db_pass)
         elif db_type == "postgresql":
-            strategy = PostgreSQLBackup(db_name, config)
+            strategy = PostgreSQLBackup(db_name, db_user, db_pass)
         elif db_type == "mongodb":
-            strategy = MongoDBBackup(db_name, config)
+            strategy = MongoDBBackup(db_name, db_user, db_pass)
         elif db_type == "sqlite":
-            strategy = SQLiteBackup(db_name, config)
+            strategy = SQLiteBackup(db_name, db_user, db_pass)
         else:
             raise ValueError(f"Unsupported database type: {db_type}")
             

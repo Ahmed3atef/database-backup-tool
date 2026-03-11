@@ -1,6 +1,9 @@
-def main():
-    print("Hello from database-backup-tool!")
+from UI.app import BackupApp
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        app = BackupApp()
+        app.run()
+    except ImportError as e:
+        raise e
